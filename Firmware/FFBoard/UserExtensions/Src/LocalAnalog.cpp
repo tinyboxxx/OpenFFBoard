@@ -8,6 +8,15 @@
 #include "LocalAnalog.h"
 #include "global_callbacks.h"
 #include "flash_helpers.h"
+#include "FirstOrderIIR.h"
+
+#define IIR_FILTER_ALPHA 0.5f
+
+//need declare struct IIR for multi channal
+FirstOrderIIR filt[10];
+
+// FirstOrderIIR_Init(&filt[0], IIR_FILTER_ALPHA);
+
 
 ClassIdentifier LocalAnalog::info = {
 	 .name = "AIN-Pins" ,
@@ -51,12 +60,20 @@ void LocalAnalog::setAutorange(bool autorange){
 	this->aconf.autorange = autorange;
 }
 
+void LocalAnalog::setFilter(bool useFilter){
+	// for(uint8_t i = 0 ; i<numPins ; i++){
+		
+	// }
+	// this->aconf.autorange = autorange;
+}
+
 std::vector<int32_t>* LocalAnalog::getAxes(){
 	uint8_t chans = 0;
 	this->buf.clear();
 	volatile uint32_t* adcbuf = getAnalogBuffer(&AIN_HADC,&chans);
 
 	uint8_t axes = std::min<uint8_t>(chans-ADC_CHAN_FPIN,numPins);
+
 
 	for(uint8_t i = 0;i<axes;i++){
 		if(!(aconf.analogmask & 0x01 << i))
@@ -76,8 +93,7 @@ std::vector<int32_t>* LocalAnalog::getAxes(){
 				val = clip(val,-0x7fff,0x7fff); // Clip if slightly out of range because of inaccuracy
 			}
 		}
-
-
+		FirstOrderIIR_Update(&filt[i],val);
 		this->buf.push_back(val);
 	}
 	return &this->buf;
